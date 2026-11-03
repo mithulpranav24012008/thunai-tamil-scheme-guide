@@ -20,6 +20,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import time
 
@@ -190,6 +191,71 @@ def _enforce(ans: Answer) -> tuple[Answer, list[str]]:
     return ans, fixes
 
 
+# ── When the planner ends without its Answer ─────────────────────────────────
+# Strands ends the planner quietly, with no error and no structured output, when the model stops for a reason
+# other than end_turn or tool_use (a content filter, for example). By then the planner has usually looked the
+# schemes up, so answer from those verified records instead of asking the person to rephrase.
+RECOVERED = {
+    "en": ("Here are verified schemes that may fit what you asked. Check the details on the official link "
+           "before you apply.",
+           "If you are not sure you qualify, ask the scheme office or your nearest e-Sevai centre."),
+    "ta": ("நீங்கள் கேட்டதற்குப் பொருந்தக்கூடிய சரிபார்க்கப்பட்ட திட்டங்கள் இவை. விண்ணப்பிக்கும் முன் "
+           "அதிகாரப்பூர்வ இணைப்பில் விவரங்களைச் சரிபாருங்கள்.",
+           "உங்களுக்குத் தகுதி உண்டா என்று சந்தேகம் இருந்தால், திட்ட அலுவலகத்தையோ அருகிலுள்ள "
+           "இ-சேவை மையத்தையோ கேளுங்கள்."),
+}
+SORRY = {
+    "en": "I'm sorry, I couldn't process that. Please try rephrasing your question.",
+    "ta": "மன்னிக்கவும், உங்கள் கேள்வியை மறுபடியும் கேளுங்கள்.",
+}
+
+
+def _json_answer(message) -> Answer | None:
+    """An Answer the planner wrote as JSON text instead of returning it."""
+    text = "".join(b.get("text", "") for b in (message or {}).get("content", []))
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end < start:
+        return None
+    try:
+        return Answer.model_validate(json.loads(text[start:end + 1]))
+    except ValueError:
+        return None
+
+
+def _found_ids(messages) -> list[str]:
+    """The scheme ids lookup_schemes returned to the planner, best match first."""
+    lookups = {b["toolUse"]["toolUseId"] for m in messages for b in m.get("content", [])
+               if "toolUse" in b and b["toolUse"].get("name") == "lookup_schemes"}
+    ids = []
+    for m in messages:
+        for b in m.get("content", []):
+            r = b.get("toolResult")
+            if r and r.get("toolUseId") in lookups:
+                for c in r.get("content", []):
+                    blob = c.get("text") or json.dumps(c.get("json", ""))
+                    ids += [i for i in re.findall(r"\bS-[A-Z]+\b", blob) if i in tools.guidance_ids() and i not in ids]
+    return ids
+
+
+def _recover(lang: str, result, planner) -> tuple[Answer, str]:
+    """Answer when the planner returned no structured output. Returns the Answer and the path it took."""
+    ans = _json_answer(getattr(result, "message", None))
+    if ans is not None:
+        return ans, "agent"
+    ids = _found_ids(getattr(planner, "messages", []))[:3]
+    if not ids:
+        return Answer(language=lang, answer=SORRY[lang], escalation="", citations=[]), "fallback"
+    by_id = {g["id"]: g for g in tools.guidance()["items"]}
+    schemes = []
+    for i in ids:
+        r = tools._scheme_record(by_id[i])
+        schemes.append(SchemeRecommendation(scheme_id=r.pop("id"), **r))
+    intro, escalation = RECOVERED[lang]
+    steps = [f"{s.name}: {s.official_url}" for s in schemes]
+    return Answer(language=lang, answer=intro, schemes=schemes, steps=steps, escalation=escalation,
+                  citations=ids), "recovered"
+
+
 def _language(text: str, history: list) -> str:
     """The language of the latest message. A short reply with no Tamil in it ("10th", "yes", "SC")
     says nothing about language, so it keeps the language of the user's previous message."""
@@ -218,8 +284,9 @@ def run(case: dict) -> dict:
     lang = case.get("lang") or _language(text, history)
     gate = RedFlagGate()
     meta = {"path": "agent", "passes": 0, "critic_ok": None}
+    graph = build_graph(lang, gate)
     try:
-        res = build_graph(lang, gate)(_prompt(lang, text, history), invocation_state={"user_text": text})
+        res = graph(_prompt(lang, text, history), invocation_state={"user_text": text})
     except RuntimeError:
         if not gate.tripped:
             raise
@@ -237,21 +304,15 @@ def run(case: dict) -> dict:
         )
         meta["path"] = "handoff"
     else:
-        ans = res.results["planner"].result.structured_output
+        result = res.results["planner"].result
+        ans = result.structured_output
         if ans is None:
-            # Fail closed: return a safe default instead of crashing
-            print("[plan] planner returned no structured answer — using fallback", flush=True)
-            ans = Answer(
-                language=lang,
-                answer="I'm sorry, I couldn't process that. Please try rephrasing your question." if lang == "en"
-                       else "மன்னிக்கவும், உங்கள் கேள்வியை மறுபடியும் கேளுங்கள்.",
-                schemes=[],
-                follow_up_question="",
-                steps=[],
-                escalation="",
-                citations=[],
-            )
-            meta["path"] = "fallback"
+            meta["planner_stop"] = str(getattr(result, "stop_reason", "?"))
+            node = getattr(graph, "nodes", {}).get("planner")
+            ans, meta["path"] = _recover(lang, result, getattr(node, "executor", None))
+            print(f"[plan] planner stopped ({meta['planner_stop']}) without its Answer -> {meta['path']}"
+                  + (f" from verified records {', '.join(ans.citations)}" if meta["path"] == "recovered" else ""),
+                  flush=True)
         meta["passes"] = sum(1 for n in res.execution_order if n.node_id == "planner")
         critic_result = res.results.get("critic")
         critic_output = getattr(critic_result.result, "structured_output", None) if critic_result else None

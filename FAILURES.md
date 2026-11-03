@@ -13,11 +13,17 @@ Judges trust a project that shows what broke. Add one `## ` entry per real failu
 
 -->
 
+## 15 of 40 answers were "please rephrase" (2026-11-04)
+- What broke: after the fallback below, the measure run had no crashes, but 15 of 40 agent answers were the fixed "please rephrase" text: 9 on the first pass, 6 after a critic revision. Most were scholarship and education questions. Both answer scenes in the recorded demo were this text.
+- How we found it: every one of these logs reads `[critic] pass 1: PASS`, then no structured answer, with no error. We replayed six model behaviours through the real Strands graph with a scripted model (`tests/test_recover.py`). Only one gives that exact signature: the model stopping for a reason other than `end_turn` or `tool_use`, such as `content_filtered`. Strands then ends the planner quietly with `structured_output = None`. A missing tool call or an invalid Answer raises an error instead. We could not see which stop reason Nova sent, because Bedrock is refused on the machine where we debugged.
+- What we changed: `agent/app.py` records the stop reason in `meta["planner_stop"]` and prints it. If the planner wrote its Answer as JSON text, that is used. Otherwise Thunai answers from the verified records that `lookup_schemes` had already returned to the planner (top 3, with fixed English or Tamil text, `meta["path"] = "recovered"`). Only when nothing was looked up does it still ask the person to rephrase. All facts come from the dataset, and `_enforce()` still runs.
+- After: 48 offline tests pass; 6 of the 7 new ones fail on the old code. Not yet re-measured on Bedrock. The next `ss measure` will show the real stop reason in `raw_agent.jsonl`.
+
 ## Planner and baseline crash when structured output is None (2026-11-04)
 - What broke: `ss measure` ran 40 cases with sandbox Bedrock credentials. 15 agent cases and 6 baseline cases crashed with `RuntimeError: planner returned no structured answer`. The Nova 2 Lite model sometimes does not return structured output (`structured_output` is `None`), and the code raised `RuntimeError` instead of failing gracefully. Each crash counted as an unsafe plan, dragging every metric down (unsafe 15, completeness 49%, goal success 0.625 vs baseline 0.814).
 - How we found it: `ss measure --workers 1` (single-threaded to avoid a concurrent credential signing bug).
 - What we changed: `agent/app.py` `run()` returns a safe fallback `Answer` when `structured_output is None` ("I couldn't process that, please rephrase"), setting `meta["path"] = "fallback"`. `agent/baseline.py` does the same. No crash, no unsafe plan.
-- After: (re-measuring)
+- After: 0 crashes; 15 of 40 answers were the fallback text (see the entry above).
 
 ## Chat locked into the emergency handoff; "studying" read as "dying" (2026-11-04)
 - What broke:
