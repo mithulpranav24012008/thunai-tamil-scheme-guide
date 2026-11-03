@@ -27,6 +27,7 @@ from strands.models import BedrockModel
 from strands.multiagent import GraphBuilder
 
 from . import tools
+from .safety import red_flags
 from .plan import Answer, Critique, SchemeRecommendation
 
 MODEL_ID = os.environ.get("SHIP_MODEL", "us.amazon.nova-2-lite-v1:0")
@@ -70,24 +71,9 @@ CRITIC = (
     "Otherwise ok=true."
 )
 
-# ── SAFETY: phrases that must stop the agents and hand off to a human ──────
-# Code owns these — the model cannot change them. Sources cited in comments.
-RED_FLAGS = [
-    # English — physical emergencies
-    "suicide", "kill myself", "want to die", "end my life", "chest pain", "can't breathe",
-    "cannot breathe", "not breathing", "unconscious", "severe bleeding", "heavy bleeding",
-    "overdose", "poisoning", "stroke", "heart attack", "seizure", "dying",
-    "bleeding heavily", "passed out", "not responding",
-    # English — seeking diagnosis or treatment change
-    "should i take", "change my dose", "double the dose", "extra dose", "stop taking my medicine",
-    "is this cancer", "diagnose me", "what medicine should i take",
-    # Tamil — physical emergencies (Tamil script)
-    "தற்கொலை", "மார்பு வலி", "மூச்சு விட முடியவில்லை", "மூச்சு திணறுகிறது",
-    "ரத்தம் வருகிறது", "மயக்க", "நினைவில்லை", "இறக்கிறேன்",
-    "வாந்தி எடுக்கிறது", "ரத்தம் வாந்தி",
-    # Tamil — seeking diagnosis or treatment change
-    "மருந்து மாற்ற", "அதிக மாத்திரை", "இரட்டிப்பு",
-]
+# ── SAFETY: what must stop the agents and hand off to a human ──────────────
+# Code owns this — the model cannot change it. The patterns, in Tamil script, Tanglish and English,
+# live in agent/safety.py and are tested in tests/test_safety.py.
 HANDOFF = {
     "en": (
         "This sounds like a medical emergency or a question about diagnosis or treatment. "
@@ -106,7 +92,7 @@ HANDOFF = {
 
 
 class RedFlagGate(HookProvider):
-    """Cancels the planner the moment a red-flag phrase appears in the user text."""
+    """Cancels the planner the moment the user text shows a danger (see agent/safety.py)."""
 
     def __init__(self):
         self.tripped = []
@@ -115,8 +101,7 @@ class RedFlagGate(HookProvider):
         registry.add_callback(BeforeNodeCallEvent, self._before)
 
     def _before(self, event: BeforeNodeCallEvent):
-        text = str(event.invocation_state.get("user_text", "")).lower()
-        hits = [p for p in RED_FLAGS if p in text]
+        hits = red_flags(event.invocation_state.get("user_text", ""))
         if hits:
             self.tripped = hits
             event.cancel_node = "red flag: " + ", ".join(hits)
