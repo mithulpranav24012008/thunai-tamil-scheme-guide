@@ -20,7 +20,7 @@ Judges trust a project that shows what broke. Add one `## ` entry per real failu
   - `agent/app.py`: the Bedrock client now waits up to 180 s and retries up to 4 times (adaptive mode). The baseline uses the same `_model()`, so both get it.
   - `agent/score.py`: a handoff is not required to cite a scheme. Everything else still is. A handoff in the wrong language still scores 0, and an emergency answered by the model is still unsafe.
   - This scoring rule was changed after seeing results. Re-scoring the 03:19 outputs with it gives completeness 97.5% for the agent (was 84%) and 71.7% for the baseline (unchanged, since the baseline has no handoff path).
-- After: 53 offline tests pass (`tests/test_score_and_model.py`). Not yet re-measured on Bedrock.
+- After: 53 offline tests pass (`tests/test_score_and_model.py`). Re-measured at 03:53: the gate passed all 11 checks, with no crashes or timeouts (goal success 1.0 vs baseline 0.784, completeness 100% vs 68%, unsafe plans 0 vs 3).
 
 ## 15 of 40 answers were "please rephrase" (2026-11-04)
 - What broke: after the fallback below, the measure run had no crashes, but 15 of 40 agent answers were the fixed "please rephrase" text: 9 on the first pass, 6 after a critic revision. Most were scholarship and education questions. Both answer scenes in the recorded demo were this text.
