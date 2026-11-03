@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F4C75"/>
+      <stop offset="50%" stop-color="#1B6CA8"/>
+      <stop offset="100%" stop-color="#2E8B8B"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="100" cy="540" r="180" fill="#ffffff" opacity="0.05"/>
+  <circle cx="1050" cy="80" r="140" fill="#ffffff" opacity="0.05"/>
+  <circle cx="960" cy="500" r="60" fill="#4ECDC4" opacity="0.15"/>
+
+  <!-- Health cross icon -->
+  <g transform="translate(80, 100)" opacity="0.9">
+    <rect x="16" y="6" width="14" height="40" rx="3" fill="#4ECDC4"/>
+    <rect x="3" y="17" width="40" height="14" rx="3" fill="#4ECDC4"/>
+  </g>
+
+  <!-- Education book icon -->
+  <g transform="translate(80, 170)" opacity="0.9">
+    <path d="M4 4 L24 12 L44 4 L44 36 L24 44 L4 36 Z" fill="none" stroke="#F7B500" stroke-width="2.5"/>
+    <line x1="24" y1="12" x2="24" y2="44" stroke="#F7B500" stroke-width="2.5"/>
+  </g>
+
+  <!-- Connection lines -->
+  <path d="M110 120 Q 200 160, 110 190" fill="none" stroke="#4ECDC4" stroke-width="1.5" opacity="0.4"/>
+  <path d="M300 250 Q 400 300, 300 350" fill="none" stroke="#F7B500" stroke-width="1.5" opacity="0.3"/>
+  <path d="M900 420 Q 800 480, 700 420" fill="none" stroke="#4ECDC4" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Main card -->
+  <rect x="200" y="120" width="800" height="390" rx="24" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1"/>
+
+  <!-- Tamil title -->
+  <text x="600" y="230" text-anchor="middle" font-family="Noto Sans Tamil, sans-serif" font-size="64" fill="#ffffff" font-weight="bold">துணை</text>
+
+  <!-- English title -->
+  <text x="600" y="290" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="36" fill="#ffffff" font-weight="600">Thunai — Tamil Scheme Guide</text>
+
+  <!-- Tagline -->
+  <text x="600" y="350" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#ffffff" fill-opacity="0.8">Health &amp; education schemes for Tamil Nadu and India, in your language</text>
+
+  <!-- Feature pills -->
+  <g font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#ffffff">
+    <rect x="270" y="400" width="140" height="36" rx="18" fill="#ffffff" fill-opacity="0.1"/>
+    <text x="340" y="423" text-anchor="middle">Natural Tamil</text>
+
+    <rect x="430" y="400" width="140" height="36" rx="18" fill="#ffffff" fill-opacity="0.1"/>
+    <text x="500" y="423" text-anchor="middle">Strands SDK</text>
+
+    <rect x="590" y="400" width="140" height="36" rx="18" fill="#ffffff" fill-opacity="0.1"/>
+    <text x="660" y="423" text-anchor="middle">Amazon Bedrock</text>
+
+    <rect x="750" y="400" width="150" height="36" rx="18" fill="#ffffff" fill-opacity="0.1"/>
+    <text x="825" y="423" text-anchor="middle">Safety first</text>
+  </g>
+
+  <!-- Hackathon badge -->
+  <rect x="400" y="460" width="400" height="28" rx="14" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="600" y="478" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#ffffff" fill-opacity="0.6">Strands SDK: Workshop to Ship — AWS Builder Center</text>
+</svg>
