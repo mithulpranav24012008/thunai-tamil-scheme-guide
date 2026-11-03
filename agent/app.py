@@ -24,6 +24,7 @@ import re
 import sys
 import time
 
+from botocore.config import Config
 from strands import Agent
 from strands.hooks import BeforeNodeCallEvent, HookProvider, HookRegistry
 from strands.models import BedrockModel
@@ -111,8 +112,13 @@ class RedFlagGate(HookProvider):
             event.cancel_node = "red flag: " + ", ".join(hits)
 
 
+# A Tamil answer with three schemes can take Nova well over a minute; boto's default 60 s read timeout cut one off
+# mid-answer in the 2026-11-04 measure run. Wait longer, and retry throttling and dropped connections.
+BOTO = Config(read_timeout=180, connect_timeout=10, retries={"max_attempts": 4, "mode": "adaptive"})
+
+
 def _model():
-    return BedrockModel(model_id=MODEL_ID, region_name=REGION, temperature=0.2)
+    return BedrockModel(model_id=MODEL_ID, region_name=REGION, temperature=0.2, boto_client_config=BOTO)
 
 
 def build_graph(lang, gate):
