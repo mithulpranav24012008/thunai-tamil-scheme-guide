@@ -1,0 +1,26 @@
+{
+  "title": "Thunai — Tamil Scheme Guide",
+  "subtitle": "Helping people in Tamil Nadu discover health and education schemes in their language",
+  "tags": ["#strands-agents", "#social-good", "#tamil", "#india", "#health", "#education"],
+  "closing": "Thunai — துணை. Schemes, in your language.",
+  "scenes": [
+    {
+      "title": "A health insurance question in Tamil",
+      "caption": "The agent understands Tamil, looks up verified schemes, and explains in natural Tamil.",
+      "input": "எனக்கு சுகாதார காப்பீடு தேவை, மருத்துவமனையில் சிகிச்சை எடுக்க வேணும்",
+      "command": "python -m agent.app \"எனக்கு சுகாதார காப்பீடு தேவை, மருத்துவமனையில் சிகிச்சை எடுக்க வேணும்\""
+    },
+    {
+      "title": "An education scholarship question in English",
+      "caption": "The agent finds the right scholarship and gives the official link and next steps.",
+      "input": "I'm an SC student in class 10, are there any scholarships for me?",
+      "command": "python -m agent.app \"I'm an SC student in class 10, are there any scholarships for me?\""
+    },
+    {
+      "title": "A medical emergency — the hook cancels every agent",
+      "caption": "The red-flag hook detects 'chest pain' and 'can't breathe', cancels the agents, and returns fixed handoff text directing to 108.",
+      "input": "I'm having chest pain and can't breathe, please help",
+      "command": "python -m agent.app \"I'm having chest pain and can't breathe, please help\""
+    }
+  ]
+}

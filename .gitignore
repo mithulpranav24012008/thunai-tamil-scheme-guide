@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+results/_raw/
+*.webm
+# Not part of Thunai — from Kironomics power
+customer_agent.py
+.kiro/hooks/kironomics.json
+.kiro/kironomics_report.py

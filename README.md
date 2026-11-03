@@ -1,0 +1,157 @@
+# Thunai — Tamil Scheme Guide
+
+A Strands Agents SDK agent that helps people in Tamil Nadu and India discover and understand government health, medical-support, and education schemes. Its defining feature is natural, respectful Tamil conversation.
+
+## What it does
+
+- The user explains what they need in Tamil or English.
+- Thunai understands the situation, asks only the necessary follow-up questions (one at a time), and suggests relevant Central, Tamil Nadu, or other verified India-wide schemes.
+- For each scheme, it explains the benefit, eligibility, jurisdiction, likely documents, application steps, official link, and source date — in the user's preferred language.
+- It never invents schemes, amounts, eligibility rules, or links. Unverifiable details are flagged and the user is directed to the official source.
+- Medical emergencies are detected and handed off immediately — Thunai never diagnoses or prescribes.
+
+## Setup
+
+### Prerequisites
+
+- Python 3.12
+- AWS credentials with access to Amazon Bedrock in `us-east-1`
+- Amazon Nova model access enabled in the Bedrock console (or set `SHIP_MODEL` to another Bedrock model)
+
+### Install
+
+```bash
+# If you have the strands-ship power installed:
+~/.strands-ship/bin/ss init    # already done if you ran setup
+
+# Or without the power — create a venv and install:
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+### AWS / Bedrock requirements
+
+Thunai uses Amazon Bedrock for the planner, critic, and evaluation judge. The default model is `us.amazon.nova-2-lite-v1:0` in `us-east-1`.
+
+```bash
+# Set up AWS credentials (profile-based):
+aws login --region us-east-1 --profile <your-profile>
+export AWS_PROFILE=<your-profile>
+export AWS_REGION=us-east-1
+export SHIP_MODEL=us.amazon.nova-2-lite-v1:0  # optional, this is the default
+
+# Verify access:
+~/.strands-ship/bin/ss bedrock
+```
+
+Credentials are read from environment variables or the AWS CLI profile. No keys are stored in source code.
+
+## How to run
+
+### One-shot mode
+
+```bash
+# English
+python -m agent.app "I need health insurance for hospital treatment"
+
+# Tamil
+python -m agent.app "எனக்கு சுகாதார காப்பீடு தேவை"
+
+# JSON output
+python -m agent.app "I need a scholarship for my SC child" --json
+
+# Or through the ship kit:
+~/.strands-ship/bin/ss run "I need health insurance for hospital treatment"
+```
+
+### Interactive chat mode
+
+```bash
+python -m agent.app --chat
+```
+
+This opens a conversation where you can ask questions in Tamil or English, and Thunai asks follow-up questions one at a time to narrow your eligibility.
+
+## Examples
+
+### Tamil — health insurance
+
+```
+You: எனக்கு சுகாதார காப்பீடு தேவை, மருத்துவமனையில் சிகிச்சை எடுக்க வேணும்
+
+துணை: உங்கள் தேவை புரிகிறது. மருத்துவமனை சிகிச்சைக்கு அரசு திட்டங்கள் உண்டு.
+  ── Ayushman Bharat PM-JAY (Central)
+     பயன்: ஆண்டுக்கு 5 லட்சம் ரூபாய் வரை இலவச மருத்துவம்...
+     Link: https://pmjay.gov.in/
+```
+
+### English — education scholarship
+
+```
+You: I'm an SC student in class 10, are there any scholarships for me?
+
+Thunai: There are central government scholarships for SC students. Here's what may fit:
+  ── Pre-Matric Scholarship for SC Students (Central)
+     Benefit: Scholarship for SC students in classes IX and X...
+     Link: https://scholarships.gov.in/
+```
+
+### Emergency handoff
+
+```
+You: I'm having chest pain and can't breathe
+
+Thunai: This sounds like a medical emergency... Please call 108 for an ambulance
+right now, or go to the nearest hospital. For mental health support, call KIRAN
+at 1800-599-0199 (free, 24/7) or Tele-MANAS at 14416.
+```
+
+## Data-source approach
+
+Thunai uses a small, clearly labelled verified dataset of government schemes (`agent/data/guidance.json`). Each scheme has:
+- An official source URL and the date it was last checked
+- Name, jurisdiction, benefit, eligibility, exclusions, documents, application steps
+
+This is **not** a complete catalogue. It covers 10 well-known schemes across health and education. The agent tells users when information is missing or needs verification, and directs them to the official source.
+
+To add or update schemes, edit `agent/data/guidance.json` and add a source with a URL and date. Re-run `ss measure` after any change.
+
+## Limitations
+
+- **Not a complete catalogue**: Only 10 schemes are included. The agent will say when it cannot find a relevant scheme.
+- **Information may be outdated**: Scheme details change. Always verify with the official scheme administrator before applying.
+- **Not a doctor, lawyer, or emergency service**: Thunai is a scheme-navigation assistant. It does not diagnose, prescribe, or recommend treatment. For medical emergencies, call 108.
+- **No guarantee of eligibility**: Thunai presents schemes worth checking. Final eligibility must be confirmed with the official scheme administrator.
+- **Tamil accuracy**: Tamil text from the model may have errors. Emergency text, handoff messages, and key safety phrases are fixed in code, but general Tamil responses should be reviewed by a fluent reader.
+
+## Evaluation
+
+Thunai is measured against a single-prompt baseline on 30 human-labelled cases covering:
+- Tamil (14 cases), English (16 cases)
+- Tamil-English code-switching
+- Ambiguous needs
+- Missing eligibility details
+- Sensitive information (Aadhaar, bank details)
+- Stale or unverifiable scheme claims
+- Education (scholarships, bus pass)
+- Health (insurance, maternity, disability, mental health)
+- Emergency medical messages (8 cases)
+- Requests for diagnosis or treatment advice (2 care cases)
+
+```bash
+# Review cases:
+~/.strands-ship/bin/ss cases check
+~/.strands-ship/bin/ss cases show
+
+# Sign off (after reviewing each label):
+~/.strands-ship/bin/ss cases approve --by "Your Name"
+
+# Run the measurement:
+~/.strands-ship/bin/ss measure
+```
+
+The measurement gate requires 100% emergency recall, 0 unsafe plans, 100% threshold accuracy, ≥95% citation faithfulness, ≥90% completeness, and goal success beating the baseline.
+
+## Important note
+
+**Eligibility must be confirmed with official scheme administrators.** Thunai is a navigation assistant, not an authority on scheme eligibility. Always verify with the official portal or office before applying.
