@@ -13,11 +13,20 @@ Judges trust a project that shows what broke. Add one `## ` entry per real failu
 
 -->
 
+## One Bedrock timeout failed three gate checks; handoffs scored as incomplete (2026-11-04)
+- What broke: the 03:19 measure run (after the recovery fix below) beat the baseline on goal success, 0.975 vs 0.853, but failed four gate checks. Three came from a single crash: `thunai-16`, a Tamil college-scholarship question, hit boto's default 60 s read timeout mid-answer. A crash counts as an unsafe plan, a wrong "facts present" result and a crash. The fourth was completeness at 84%: the scorer required every answer to cite a scheme, so each of the 16 emergency handoffs, which must only say "call 108" and cite nothing, scored 2 of 3.
+- How we found it: reading the per-case rows in `results/measure.json`. Every incomplete row was a handoff or the crash.
+- What we changed:
+  - `agent/app.py`: the Bedrock client now waits up to 180 s and retries up to 4 times (adaptive mode). The baseline uses the same `_model()`, so both get it.
+  - `agent/score.py`: a handoff is not required to cite a scheme. Everything else still is. A handoff in the wrong language still scores 0, and an emergency answered by the model is still unsafe.
+  - This scoring rule was changed after seeing results. Re-scoring the 03:19 outputs with it gives completeness 97.5% for the agent (was 84%) and 71.7% for the baseline (unchanged, since the baseline has no handoff path).
+- After: 53 offline tests pass (`tests/test_score_and_model.py`). Not yet re-measured on Bedrock.
+
 ## 15 of 40 answers were "please rephrase" (2026-11-04)
 - What broke: after the fallback below, the measure run had no crashes, but 15 of 40 agent answers were the fixed "please rephrase" text: 9 on the first pass, 6 after a critic revision. Most were scholarship and education questions. Both answer scenes in the recorded demo were this text.
 - How we found it: every one of these logs reads `[critic] pass 1: PASS`, then no structured answer, with no error. We replayed six model behaviours through the real Strands graph with a scripted model (`tests/test_recover.py`). Only one gives that exact signature: the model stopping for a reason other than `end_turn` or `tool_use`, such as `content_filtered`. Strands then ends the planner quietly with `structured_output = None`. A missing tool call or an invalid Answer raises an error instead. We could not see which stop reason Nova sent, because Bedrock is refused on the machine where we debugged.
 - What we changed: `agent/app.py` records the stop reason in `meta["planner_stop"]` and prints it. If the planner wrote its Answer as JSON text, that is used. Otherwise Thunai answers from the verified records that `lookup_schemes` had already returned to the planner (top 3, with fixed English or Tamil text, `meta["path"] = "recovered"`). Only when nothing was looked up does it still ask the person to rephrase. All facts come from the dataset, and `_enforce()` still runs.
-- After: 48 offline tests pass; 6 of the 7 new ones fail on the old code. Not yet re-measured on Bedrock. The next `ss measure` will show the real stop reason in `raw_agent.jsonl`.
+- After: re-measured at 03:19. The stop reason was `malformed_tool_use` (Nova produced an invalid tool call), not a content filter. "Please rephrase" answers went from 15 to 0: 14 were answered from verified records, and the judge scored them as well as normal answers. Goal success went from 0.688 to 0.975 (baseline 0.853). Some recovered answers include a weakly matching third scheme.
 
 ## Planner and baseline crash when structured output is None (2026-11-04)
 - What broke: `ss measure` ran 40 cases with sandbox Bedrock credentials. 15 agent cases and 6 baseline cases crashed with `RuntimeError: planner returned no structured answer`. The Nova 2 Lite model sometimes does not return structured output (`structured_output` is `None`), and the code raised `RuntimeError` instead of failing gracefully. Each crash counted as an unsafe plan, dragging every metric down (unsafe 15, completeness 49%, goal success 0.625 vs baseline 0.814).
