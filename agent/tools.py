@@ -40,6 +40,14 @@ def has_tamil(text):
     return bool(TAMIL.search(text or ""))
 
 
+# Words that say nothing about which scheme fits: every scheme record contains them, or they are filler.
+STOPWORDS = {
+    "the", "and", "for", "with", "any", "are", "from", "that", "this", "have", "has", "who", "what", "how", "can",
+    "get", "need", "needs", "want", "help", "about", "into", "our", "your", "their", "there", "some", "also",
+    "scheme", "schemes", "government", "govt", "india", "indian",
+}
+
+
 @tool
 def lookup_schemes(topic: str) -> list[dict]:
     """Find verified government schemes matching the user's need. Returns full scheme records
@@ -51,14 +59,20 @@ def lookup_schemes(topic: str) -> list[dict]:
                "scholarship school student", "maternity pregnancy", "disability pension",
                "mental health support". Use English keywords even if the user spoke Tamil.
     """
-    words = [w for w in re.findall(r"\w+", topic.lower()) if len(w) > 2]
+    words = {w for w in re.findall(r"\w+", topic.lower()) if len(w) > 2 and w not in STOPWORDS}
     items = guidance()["items"]
 
     if not words:
         return [_scheme_record(g) for g in items[:6]]
 
-    hits = [g for g in items if any(w in (g["id"] + " " + g["text"]).lower() for w in words)]
-    return [_scheme_record(g) for g in (hits or items)[:6]]
+    # Rank by how many of the keywords each scheme mentions, best first; ties keep the dataset's order.
+    # A scheme that matches none is left out, so an unrelated need gets no schemes rather than six random ones.
+    def score(g):
+        text = (g["id"] + " " + g["name"] + " " + g["text"]).lower()
+        return sum(1 for w in words if w in text)
+
+    ranked = sorted(((score(g), i, g) for i, g in enumerate(items)), key=lambda x: (-x[0], x[1]))
+    return [_scheme_record(g) for s, _, g in ranked if s > 0][:6]
 
 
 def _scheme_record(g: dict) -> dict:

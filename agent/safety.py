@@ -71,7 +71,8 @@ NOW_ONLY = {
 PAST = re.compile(r"\b(last (year|month|week)|years? ago|months? ago|weeks? ago|ago|history of|in (19|20)\d\d|previously|survived)\b")
 
 # "dying" is a figure of speech as often as not: "dying to get a scholarship", "my phone is dying".
-DYING = re.compile(r"((?:[\w']+\s+){0,3})dying\b(?!\s+(?:to|for|of laughter)\b)")
+# \b before "dying" so that "studying" is not read as dying.
+DYING = re.compile(r"((?:[\w']+\s+){0,3})\bdying\b(?!\s+(?:to|for|of laughter)\b)")
 NOT_ALIVE = re.compile(r"\b(phone|battery|laptop|plant|plants|car|bike|light|business|shop|crops?)\b")
 
 

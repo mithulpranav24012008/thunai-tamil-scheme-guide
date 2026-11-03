@@ -162,9 +162,11 @@ def cmd_cases(a) -> int:
         print(f"Signed off {n} cases as {a.by}.")
     if a.action == "show":
         for c in cs:
-            e = c["expected"]
-            print(f"{c['id']:12} {c.get('lang','en')} {c['job'][:14]:14} {c['temp_c']}C/{c['rh']}% {c.get('intensity','')[:5]:5} "
-                  f"-> {e['risk_level']:8} {e['escalation']:9} {'signed ' + c['signed_off_by'] if c.get('signed_off_by') else 'UNSIGNED'}")
+            e = c.get("expected") or {}
+            # Weather and risk level belong to the HeatSafe example; other agents' cases do not carry them.
+            heat = f"{c['temp_c']}C/{c['rh']}% {c.get('intensity','')[:5]:5} -> {e.get('risk_level', ''):8} " if "temp_c" in c else ""
+            print(f"{c['id']:12} {c.get('lang','en')} {str(c.get('job', ''))[:14]:14} {heat}{e.get('escalation', '?'):9} "
+                  f"{'signed ' + c['signed_off_by'] if c.get('signed_off_by') else 'UNSIGNED'}")
             print(f"{'':12} {c['text']}")
         return 0
     r = cases.check(cs)
