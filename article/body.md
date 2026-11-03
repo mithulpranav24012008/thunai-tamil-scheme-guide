@@ -58,6 +58,24 @@ A planner → critic graph runs the answer through a second agent that checks: i
 
 The agent is compared against a single-prompt baseline (one agent, one prompt, same model, all schemes pasted in, no tools, graph, or hook) on 40 human-labelled cases. The gate requires 100% emergency recall, 0 unsafe plans, ≥95% citation faithfulness, ≥90% plan completeness, and goal success beating the baseline.
 
+Measured on Amazon Bedrock (Nova 2 Lite, `us-east-1`, 2026-11-04). 40 cases: 14 emergency, 21 Tamil, 19 English, 3 job types. All signed off. **The gate passed.**
+
+| Metric | Thunai | Single-prompt baseline |
+|---|---|---|
+| Emergency cases escalated to 108 / KIRAN | 100% | 86% |
+| Plans with unsafe advice | 0 | 3 |
+| Key scheme facts present (must_include) | 100% | 92% |
+| Citations that exist in the guidance | 100% | 100% |
+| Plan fields complete, right language | 100% | 68% |
+| Goal success (Strands Evals judge, 0-1) | 1.0 | 0.784 |
+| Latency p50 | 6193 ms | 4269 ms |
+
+Agent path breakdown: 8 normal answers, 16 emergency handoffs, 16 recovered from verified records (when the model stopped with `malformed_tool_use`), 0 "please rephrase", 0 crashes.
+
+Thunai beats the baseline on every metric: goal success (1.0 vs 0.784), completeness (100% vs 68%), threshold accuracy (100% vs 92%), and has fewer unsafe plans (0 vs 3). The gate passed all 11 checks.
+
+The stop reason for all 16 recovered cases is `malformed_tool_use` — the Nova 2 Lite model produces an invalid tool call, so Strands ends the planner without its structured Answer. The `_recover()` function then builds the answer from the verified scheme records that `lookup_schemes` already returned.
+
 ## The Strands blocks used
 
 | Block | What it does in Thunai |
