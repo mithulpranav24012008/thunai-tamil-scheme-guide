@@ -6,3 +6,4 @@ results/_raw/
 customer_agent.py
 .kiro/hooks/kironomics.json
 .kiro/kironomics_report.py
+.DS_Store

@@ -6,6 +6,8 @@ health, medical-support, and education schemes. Speaks natural Tamil and English
     python -m agent.app "your message"            # one-shot answer
     python -m agent.app "message" --json          # JSON output
     python -m agent.app --chat                     # interactive conversation
+    python -m agent.app --audio file.wav           # transcribe and answer
+    python -m agent.app --chat --voice             # voice chat (microphone)
 
 Architecture: planner -> critic graph with a red-flag hook and code-level fact
 enforcement. The planner calls lookup_schemes and structures the answer; the
@@ -27,6 +29,7 @@ from strands.models import BedrockModel
 from strands.multiagent import GraphBuilder
 
 from . import tools
+from . import speech
 from .safety import red_flags
 from .plan import Answer, Critique, SchemeRecommendation
 
@@ -279,10 +282,31 @@ def _print_answer(ans: dict):
         print(f"  ⚠ {ans['escalation']}\n")
 
 
-def chat_loop():
+def _handle_transcript(transcript: str, is_low: bool, json_output: bool = False) -> int:
+    """Print transcript, apply low-confidence rule, run agent, print answer."""
+    if not transcript:
+        print("\nI didn't catch that. Could you repeat or type your question?\n")
+        return 1
+    print(f"\nYou said: {transcript}\n")
+    if is_low:
+        if not red_flags(transcript):
+            print("I didn't catch that clearly. Could you repeat or type your question?\n")
+            return 1
+        print("[safety] Low-confidence transcript contains red-flag words — proceeding with handoff\n")
+    out = run({"text": transcript})
+    if json_output:
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+    else:
+        _print_answer(out["plan"])
+    return 0
+
+
+def chat_loop(voice: bool = False, stt_lang: str = "ta-IN"):
     """Interactive conversation: gather details one question at a time, then suggest schemes."""
     print("═" * 60)
     print("  துணை — Tamil Scheme Guide  /  Thunai")
+    if voice:
+        print("  🎤 Voice mode — speak your question")
     print("  வணக்கம்! Health மற்றும் education schemes பற்றி")
     print("  கேளுங்கள். / Hello! Ask me about health or")
     print("  education schemes in Tamil Nadu and India.")
@@ -291,12 +315,37 @@ def chat_loop():
 
     history: list[tuple[str, str]] = []  # (who, text), the last few turns
     while True:
-        try:
-            user_input = input("You: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            break
-        if not user_input:
-            continue
+        if voice:
+            try:
+                audio_path = speech.record_microphone()
+            except Exception as e:
+                print(f"\n🎤 Error: {e}\n")
+                break
+            try:
+                result = speech.transcribe_file(audio_path, stt_lang)
+            except Exception as e:
+                print(f"\nTranscription error: {e}\n")
+                continue
+            finally:
+                speech.cleanup(audio_path)
+            user_input = result.get("transcript", "")
+            is_low = result.get("is_low_confidence", False)
+            if not user_input:
+                print("\nI didn't catch that. Could you repeat or type your question?\n")
+                continue
+            print(f"\nYou said: {user_input}\n")
+            if is_low:
+                if not red_flags(user_input):
+                    print("I didn't catch that clearly. Could you repeat or type your question?\n")
+                    continue
+                print("[safety] Low-confidence transcript contains red-flag words — proceeding with handoff\n")
+        else:
+            try:
+                user_input = input("You: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if not user_input:
+                continue
         if user_input.lower() in ("quit", "exit", "வெளியேறு", "முடி"):
             break
 
@@ -317,10 +366,21 @@ def main(argv=None):
     ap.add_argument("text", nargs="?", default=None, help="Your question about health or education schemes")
     ap.add_argument("--json", action="store_true", help="Output as JSON")
     ap.add_argument("--chat", action="store_true", help="Interactive conversation mode")
+    ap.add_argument("--voice", action="store_true", help="Speak your question (record from microphone)")
+    ap.add_argument("--audio", default=None, help="Transcribe an audio file and answer (testable path)")
+    ap.add_argument("--stt-lang", default="ta-IN", help="Transcribe language code: ta-IN (Tamil) or en-IN (English)")
     a = ap.parse_args(argv)
 
     if a.chat:
-        return chat_loop()
+        return chat_loop(voice=a.voice, stt_lang=a.stt_lang)
+
+    if a.audio:
+        try:
+            result = speech.transcribe_file(a.audio, a.stt_lang)
+        except Exception as e:
+            print(f"Transcription error: {e}")
+            return 1
+        return _handle_transcript(result.get("transcript", ""), result.get("is_low_confidence", False), a.json)
 
     if not a.text:
         ap.print_help()

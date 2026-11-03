@@ -72,6 +72,41 @@ python -m agent.app --chat
 
 This opens a conversation where you can ask questions in Tamil or English, and Thunai asks follow-up questions one at a time to narrow your eligibility.
 
+### Speech input (--voice and --audio)
+
+Thunai can transcribe spoken Tamil, Tanglish (Tamil in English script), and Indian English using Amazon Transcribe, then run the transcript through the same agent path.
+
+```bash
+# Transcribe an audio file and answer (testable path, no microphone needed)
+python -m agent.app --audio recording.wav
+
+# Transcribe with Indian English
+python -m agent.app --audio recording.wav --stt-lang en-IN
+
+# Interactive voice chat (requires microphone)
+python -m agent.app --chat --voice
+```
+
+Install the speech dependencies:
+
+```bash
+pip install amazon-transcribe==0.6.4          # for --audio and --voice
+pip install sounddevice==0.5.6 numpy          # for --voice only (macOS: also run brew install portaudio)
+```
+
+**Supported languages** (verified from AWS docs, 2026-11-04):
+- Tamil (`ta-IN`): batch and streaming — [Transcribe supported languages](https://docs.aws.amazon.com/transcribe/latest/dg/supported-languages.html)
+- Indian English (`en-IN`): batch and streaming — [announced 2019](https://aws.amazon.com/about-aws/whats-new/2019/05/amazon-transcribe-supports-hindi-indian-accented-english/)
+
+**Not supported** (checked and confirmed):
+- Amazon Nova 2 Sonic: no Tamil — [language support](https://docs.aws.amazon.com/nova/latest/nova2-userguide/sonic-language-support.html)
+- Amazon Polly: no Tamil voice
+- Strands bidi voice extras: built on Nova Sonic, so no Tamil
+
+**Text-to-speech (spoken replies) is out of scope** — no AWS service has a Tamil voice. The agent shows the transcript and the text answer on screen.
+
+**Safety with speech**: an emergency spoken in Tamil, Tanglish, or English still triggers the red-flag hook and hands off to 108 immediately. If the transcript is low-confidence, the agent asks the user to repeat — unless it contains red-flag words, in which case it hands off anyway (a missed emergency is worse than a false alarm). Audio is never stored; temporary files are deleted after transcription.
+
 ## Examples
 
 ### Tamil — health insurance
