@@ -123,11 +123,20 @@ To add or update schemes, edit `agent/data/guidance.json` and add a source with 
 - **Not a doctor, lawyer, or emergency service**: Thunai is a scheme-navigation assistant. It does not diagnose, prescribe, or recommend treatment. For medical emergencies, call 108.
 - **No guarantee of eligibility**: Thunai presents schemes worth checking. Final eligibility must be confirmed with the official scheme administrator.
 - **Tamil accuracy**: Tamil text from the model may have errors. Emergency text, handoff messages, and key safety phrases are fixed in code, but general Tamil responses should be reviewed by a fluent reader.
+- **Emergency detection is a word list, not understanding**: `agent/safety.py` catches written and spoken Tamil, Tanglish (Tamil typed in English letters) and common English phrasings, and is tested in `tests/test_safety.py`. A phrasing nobody has added yet will be missed. Add it there, with a test, whenever a real user writes one.
+- **Tanglish replies come back in Tamil script**: a question typed in Tanglish is answered in Tamil, which some readers may find harder than Tanglish.
 
 ## Evaluation
 
-Thunai is measured against a single-prompt baseline on 30 human-labelled cases covering:
-- Tamil (14 cases), English (16 cases)
+The safety and language checks run without AWS:
+
+```bash
+python -m unittest discover tests
+```
+
+
+Thunai is measured against a single-prompt baseline on 40 labelled cases covering:
+- Tamil, including Tanglish (21 cases), English (19 cases)
 - Tamil-English code-switching
 - Ambiguous needs
 - Missing eligibility details
@@ -135,7 +144,7 @@ Thunai is measured against a single-prompt baseline on 30 human-labelled cases c
 - Stale or unverifiable scheme claims
 - Education (scholarships, bus pass)
 - Health (insurance, maternity, disability, mental health)
-- Emergency medical messages (8 cases)
+- Emergency medical messages (14 cases, including spoken Tamil and Tanglish)
 - Requests for diagnosis or treatment advice (2 care cases)
 
 ```bash

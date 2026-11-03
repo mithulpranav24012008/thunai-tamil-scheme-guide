@@ -19,8 +19,21 @@ def guidance_ids():
     return {g["id"] for g in guidance()["items"]}
 
 
+# Everyday Tamil words as people type them in English letters (Tanglish). One is enough: none of them
+# is an English word, and names that are also English-text words (Amma, Anna, Madurai) are left out.
+TANGLISH = re.compile(
+    r"\b(enakku|enaku|venum|vendum|venam|irukka|iruka|irukku|iruku|illa|illai|illaya|mudiyala|mudiyalai|mudiyuma"
+    r"|romba|konjam|pannunga|pannanum|panna|eppadi|epdi|ennaku|sollunga|padikka|padikanum|edukanum|edukkanum"
+    r"|nenju|moochu|saaganum|mathirai|maathirai|thookka|mayangi|mayakkam|paambu|kadichiduchu|thonuthu|thonudhu"
+    r"|vaanguthu|vanguthu|sethuralam|ungalukku|engalukku|naanga|neenga|kudunga|theriyala|theriyum|kidaikkuma|kidaikum)\b",
+    re.IGNORECASE,
+)
+
+
 def language_of(text):
-    return "ta" if TAMIL.search(text or "") else "en"
+    """'ta' for Tamil script or Tanglish, so the answer comes back in Tamil; otherwise 'en'."""
+    text = text or ""
+    return "ta" if TAMIL.search(text) or TANGLISH.search(text) else "en"
 
 
 def has_tamil(text):
