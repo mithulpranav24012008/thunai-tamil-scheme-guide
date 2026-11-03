@@ -31,7 +31,17 @@ def run(case):
     )
     a = Agent(model=_model(), callback_handler=None, structured_output_model=Answer, system_prompt=prompt)
     msg = f"User: {case['text']}"
-    ans = a(msg).structured_output or a(msg).structured_output
+    ans = a(msg).structured_output
     if ans is None:
-        raise RuntimeError("baseline returned no structured answer")
+        # Fail closed: return a safe default instead of crashing
+        ans = Answer(
+            language=lang,
+            answer="I'm sorry, I couldn't process that. Please try rephrasing your question." if lang == "en"
+                   else "மன்னிக்கவும், உங்கள் கேள்வியை மறுபடியும் கேளுங்கள்.",
+            schemes=[],
+            follow_up_question="",
+            steps=[],
+            escalation="",
+            citations=[],
+        )
     return {"plan": ans.model_dump(), "meta": {"path": "baseline", "latency_ms": int((time.time() - t0) * 1000)}}

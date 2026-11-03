@@ -239,7 +239,19 @@ def run(case: dict) -> dict:
     else:
         ans = res.results["planner"].result.structured_output
         if ans is None:
-            raise RuntimeError("planner returned no structured answer")
+            # Fail closed: return a safe default instead of crashing
+            print("[plan] planner returned no structured answer — using fallback", flush=True)
+            ans = Answer(
+                language=lang,
+                answer="I'm sorry, I couldn't process that. Please try rephrasing your question." if lang == "en"
+                       else "மன்னிக்கவும், உங்கள் கேள்வியை மறுபடியும் கேளுங்கள்.",
+                schemes=[],
+                follow_up_question="",
+                steps=[],
+                escalation="",
+                citations=[],
+            )
+            meta["path"] = "fallback"
         meta["passes"] = sum(1 for n in res.execution_order if n.node_id == "planner")
         critic_result = res.results.get("critic")
         critic_output = getattr(critic_result.result, "structured_output", None) if critic_result else None

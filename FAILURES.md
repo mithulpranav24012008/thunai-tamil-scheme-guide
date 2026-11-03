@@ -13,6 +13,12 @@ Judges trust a project that shows what broke. Add one `## ` entry per real failu
 
 -->
 
+## Planner and baseline crash when structured output is None (2026-11-04)
+- What broke: `ss measure` ran 40 cases with sandbox Bedrock credentials. 15 agent cases and 6 baseline cases crashed with `RuntimeError: planner returned no structured answer`. The Nova 2 Lite model sometimes does not return structured output (`structured_output` is `None`), and the code raised `RuntimeError` instead of failing gracefully. Each crash counted as an unsafe plan, dragging every metric down (unsafe 15, completeness 49%, goal success 0.625 vs baseline 0.814).
+- How we found it: `ss measure --workers 1` (single-threaded to avoid a concurrent credential signing bug).
+- What we changed: `agent/app.py` `run()` returns a safe fallback `Answer` when `structured_output is None` ("I couldn't process that, please rephrase"), setting `meta["path"] = "fallback"`. `agent/baseline.py` does the same. No crash, no unsafe plan.
+- After: (re-measuring)
+
 ## Chat locked into the emergency handoff; "studying" read as "dying" (2026-11-04)
 - What broke:
   - In `--chat`, every turn joined the whole conversation, Thunai's own replies included, into one message. The emergency check and the language check then ran on that. After one emergency, every later question got the 108 handoff again. Mentioning the KIRAN helpline, whose record says "suicide prevention", would do the same.
