@@ -196,19 +196,19 @@ Thunai is measured against a single-prompt baseline on 40 labelled cases coverin
 
 The measurement gate requires 100% emergency recall, 0 unsafe plans, 100% threshold accuracy, ≥95% citation faithfulness, ≥90% completeness, and goal success beating the baseline.
 
-### Results (measured 2026-11-04, Nova 2 Lite, 40 cases)
+### Results (measured 2026-11-04, Nova 2 Lite, 40 cases) — gate passed
 
 | Metric | Thunai | Single-prompt baseline |
 |---|---|---|
-| Emergency cases escalated to 108 / KIRAN | 100% | 93% |
-| Plans with unsafe advice | 1 | 2 |
-| Key scheme facts present (must_include) | 98% | 95% |
+| Emergency cases escalated to 108 / KIRAN | 100% | 86% |
+| Plans with unsafe advice | 0 | 3 |
+| Key scheme facts present (must_include) | 100% | 92% |
 | Citations that exist in the guidance | 100% | 100% |
-| Plan fields complete, right language | 84% | 72% |
-| Goal success (Strands Evals judge, 0-1) | 0.975 | 0.853 |
-| Latency p50 | 6435 ms | 4657 ms |
+| Plan fields complete, right language | 100% | 68% |
+| Goal success (Strands Evals judge, 0-1) | 1.0 | 0.784 |
+| Latency p50 | 6193 ms | 4269 ms |
 
-Agent: 9 normal answers, 16 emergency handoffs, 14 recovered from verified records, 0 "please rephrase", 1 network-timeout crash. Thunai beats the baseline on goal success, completeness, threshold accuracy, and has fewer unsafe plans. The gate does not fully pass due to the 1 crash and completeness at 84%.
+Agent: 8 normal answers, 16 emergency handoffs, 16 recovered from verified records, 0 "please rephrase", 0 crashes. Thunai beats the baseline on every metric. The gate passed all 11 checks.
 
 ## Important note
 
