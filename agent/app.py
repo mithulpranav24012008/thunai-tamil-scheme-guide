@@ -187,13 +187,36 @@ def _enforce(ans: Answer) -> tuple[Answer, list[str]]:
     return ans, fixes
 
 
+def _language(text: str, history: list) -> str:
+    """The language of the latest message. A short reply with no Tamil in it ("10th", "yes", "SC")
+    says nothing about language, so it keeps the language of the user's previous message."""
+    lang = tools.language_of(text)
+    if lang == "en" and len(text.split()) <= 3:
+        earlier = [said for who, said in history if who == "User"]
+        if earlier:
+            return tools.language_of(earlier[-1])
+    return lang
+
+
+def _prompt(lang: str, text: str, history: list) -> str:
+    if not history:
+        return f"User ({lang}): {text}"
+    said = "\n".join(f"{who}: {line}" for who, line in history)
+    return f"Conversation so far, for context:\n{said}\n\nUser ({lang}): {text}"
+
+
 def run(case: dict) -> dict:
+    """Answer one message. case["history"] holds the earlier turns as (who, text) pairs: they give the
+    planner context, but only the latest message is checked for danger and decides the language, so
+    Thunai's own replies (which may name a suicide helpline) and an emergency already handed off
+    cannot trip the gate again on every later turn."""
     t0 = time.time()
-    lang = case.get("lang") or tools.language_of(case["text"])
+    text, history = case["text"], case.get("history") or []
+    lang = case.get("lang") or _language(text, history)
     gate = RedFlagGate()
     meta = {"path": "agent", "passes": 0, "critic_ok": None}
     try:
-        res = build_graph(lang, gate)(f"User ({lang}): {case['text']}", invocation_state={"user_text": case["text"]})
+        res = build_graph(lang, gate)(_prompt(lang, text, history), invocation_state={"user_text": text})
     except RuntimeError:
         if not gate.tripped:
             raise
@@ -266,7 +289,7 @@ def chat_loop():
     print("  Type 'quit' to exit.")
     print("═" * 60 + "\n")
 
-    history: list[str] = []
+    history: list[tuple[str, str]] = []  # (who, text), the last few turns
     while True:
         try:
             user_input = input("You: ").strip()
@@ -277,16 +300,13 @@ def chat_loop():
         if user_input.lower() in ("quit", "exit", "வெளியேறு", "முடி"):
             break
 
-        history.append(user_input)
-        # Build a context message from the conversation so far
-        context = " | ".join(history) if len(history) > 1 else user_input
         try:
-            out = run({"text": context})
+            out = run({"text": user_input, "history": history[-8:]})
         except Exception as e:
             print(f"\nThunai: Sorry, something went wrong: {e}\n")
             continue
         _print_answer(out["plan"])
-        history.append(out["plan"].get("answer", ""))
+        history += [("User", user_input), ("Thunai", out["plan"].get("answer", ""))]
 
     print("\nநன்றி! / Thank you for using Thunai!\n")
     return 0

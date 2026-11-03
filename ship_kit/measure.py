@@ -148,7 +148,7 @@ def markdown(r: dict) -> str:
            f"Model `{r['model']}` for agent, baseline and judge. {a['cases']} human-labelled cases "
            f"({r['cases']['emergency']} emergency, {r['cases']['ta']} Tamil, {r['cases']['jobs']} job types). "
            "Baseline = one agent, one prompt, same model, same guidance pasted in; no tools, graph, critic or hook.", "",
-           "| Metric | HeatSafe Shift | Single-prompt baseline |", "|---|---|---|"]
+           f"| Metric | {r.get('title', 'Agent')} | Single-prompt baseline |", "|---|---|---|"]
     out += [f"| {m} | {x} | {y} |" for m, x, y in rows]
     for title, key in (("By language", "by_language"), ("By job", "by_job")):
         out += ["", f"## {title}", "", "| Group | Cases | 108 recall (agent / base) | Unsafe (agent / base) | Risk correct (agent / base) |",

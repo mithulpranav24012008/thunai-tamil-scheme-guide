@@ -74,7 +74,8 @@ def _badge(kind: str, text: str) -> tuple[str, str, str] | None:
         return ({"LOWER": "ok", "MODERATE": "info", "HIGH": "warn", "EXTREME": "stop"}.get(lvl, "info"),
                 f"RISK {lvl}", "code: NWS heat index + OSHA bands; " + text.split(" -> ")[0])
     if kind == "safety":
-        stop = "EMERGENCY" in text
+        # HeatSafe logs "EMERGENCY"; Thunai's red-flag hook logs "RED FLAG ... HAND OFF". Both mean call 108.
+        stop = any(w in text for w in ("EMERGENCY", "RED FLAG", "HAND OFF"))
         return ("stop" if stop else "warn", "CALL 108" if stop else "STOP WORK", text)
     if kind == "critic":
         return ("ok" if "PASS" in text else "warn", "CRITIC " + ("PASS" if "PASS" in text else "REVISE"), text[:150])
