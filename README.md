@@ -208,7 +208,7 @@ The measurement gate requires 100% emergency recall, 0 unsafe plans, 100% thresh
 | Goal success (Strands Evals judge, 0-1) | 1.0 | 0.784 |
 | Latency p50 | 6193 ms | 4269 ms |
 
-Agent: 8 normal answers, 16 emergency handoffs, 16 recovered from verified records, 0 "please rephrase", 0 crashes. Thunai beats the baseline on every metric. The gate passed all 11 checks.
+Agent: 8 normal answers, 16 emergency handoffs, 16 recovered from verified records, 0 "please rephrase", 0 crashes. The gate passed all 11 checks. Thunai is better than the baseline on safety and quality, ties on citations (both 100%), and is about 2 s slower per answer because of the tool call and the critic. Emergency handoffs are not required to cite a scheme; that scoring rule was changed after seeing an earlier run, as logged in `FAILURES.md`.
 
 ## Important note
 

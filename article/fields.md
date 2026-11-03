@@ -14,7 +14,8 @@ Mithul Pranav G R
 
 ## Links
 - **GitHub repository:** https://github.com/mithulpranav24012008/thunai-tamil-scheme-guide
-- **Demo video:** https://github.com/mithulpranav24012008/thunai-tamil-scheme-guide/releases/download/demo-video-v1/thunai-one-take.mp4
+- **Demo video (live run on Bedrock, 54 s):** https://github.com/mithulpranav24012008/thunai-tamil-scheme-guide/releases/download/demo-video-v1/thunai-live-demo.mp4
+- **Explainer film (63 s):** https://github.com/mithulpranav24012008/thunai-tamil-scheme-guide/releases/download/demo-video-v1/thunai-one-take.mp4
 - **Strands SDK:** https://strandsagents.com
 
 ## Category
